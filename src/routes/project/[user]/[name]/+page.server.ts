@@ -4,12 +4,14 @@ import util from 'util';
 export async function load({params}) {
     const {user, name} = params;
     const projectUrl = util.format(API_PROJECT_URL, user, name);
-    const heartbeatUrl = util.format(API_HEARTBEAT_URL, user);
+    const heartbeatUrl = util.format(API_HEARTBEAT_URL, user, name);
 
     const project: Project = await fetch(projectUrl).then(res => res.json());
 
-    const heartbeats: HeartbeatSpanList = await fetch(heartbeatUrl).then(res => res.json());
-    heartbeats.spans = heartbeats.spans.filter(span => span.project === name);
+    const heartbeats: HeartbeatSpanList = await fetch(heartbeatUrl).then(async res => {
+        if (res.ok) return res.json();
+        throw new Error(`Failed to fetch heartbeats: ${res.status} ${res.statusText}:\n${await res.text()}`);
+    });
 
     return {
         ...project,

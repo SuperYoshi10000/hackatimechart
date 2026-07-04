@@ -2,6 +2,7 @@ interface HeartbeatSpanList {
     spans: HeartbeatSpan[];
 }
 interface HeartbeatSpan {
+    duration: any;
     start_time: number;
     end_time: number;
     project: string;
