@@ -26,7 +26,7 @@
     let chartLabels: HTMLDivElement;
     let chartSvg: SVGSVGElement;
 
-    const params = page.url.searchParams;
+    const {searchParams} = page.url;
     
     const width = 3600; // 1 hour
     const height = 240; // 24 hours
@@ -39,11 +39,19 @@
     const secondsPerDay = 86400;
     const minutesPerLine = 5;
 
-    let date = new Date();
+    const {user} = page.params;
     
-    if (params.has("ts")) {
-        const ts = params.get("ts");
-        if (ts?.includes('-')) {
+    let totalTime = total_seconds;
+
+    let dayOffset = -2;
+    let date = new Date(Date.now() + dayOffset * secondsPerDay * 1000);
+    
+    if (searchParams.has("ts")) {
+        const ts = searchParams.get("ts");
+        const [, days] = ts?.match(/-(\d+)d/) ?? [];
+        if (typeof days === "string")
+            date = new Date(Date.now() - Number(days) * secondsPerDay * 1000);
+        else if (ts?.includes('-')) {
             const [year, month, day] = ts.split('-').map(Number);
             date = new Date(year, month - 1, day);
         } else date = new Date(Number(ts) * 1000);
@@ -51,9 +59,8 @@
 
     date.setHours(0, 0, 0, 0);
 
-    let dayOffset = -2;
-    let showDays = params.has("days") ? Number(params.get("days")) : 7; // how many days to show
-    let offset = date.getTime() / 1000 + dayOffset * secondsPerDay; // seconds since unix epoch, at start of day
+    let showDays = searchParams.has("days") ? Number(searchParams.get("days")) : 7; // how many days to show
+    let offset = date.getTime() / 1000; // seconds since unix epoch, at start of day
     console.log(offset, "d", date.getTime() / 1000);
 
     onMount(drawSvg);
@@ -93,21 +100,37 @@
                 }
             }
         })
-        for (let m = 1; m < 60; m++) {
+        for (let m = 0; m <= 60; m++) {
             let color = `rgba(255, 255, 255, ${m % minutesPerLine === 0 ? 0.25 : 0.125})`;
-            drawRect(m * 60 * scale, 0, 1, height * showDays, color);
+            let x = m * 60 * scale;
+            drawLine(x, 0, x, height * showDays, color);
         }
         for (let d = 0; d < showDays; d++) {
+            let dayStart = d * secondsPerDay + offset;
+            let time = heartbeats.filter(h => h.start_time >= dayStart && h.start_time < dayStart + secondsPerDay).reduce((a, b) => a + b.duration, 0);
+            let hours = Math.floor(time / 3600);
+            let minutes = Math.floor((time % 3600) / 60);
+
             const dayY = d * 240 - 1;
-            drawRect(0, dayY, width * scale, 2, "white");
+            drawLine(0, dayY + 1, width * scale, dayY + 1, "white", 2);
+            
             addDateLabel(new Date((d * secondsPerDay + offset) * 1000), dayY);
+            addLabel(`Total: ${hours}h ${minutes}m`, dayY + 20);
+            
             for (let h = 1; h < 24; h++) { // 1 to not overlap day line
-                drawRect(0, d * 240 + h * barSize, width * scale, 1, "#FFFFFF7F");
+                let y = d * 240 + h * barSize;
+                drawLine(0, y, width * scale, y, "#FFFFFF7F");
+            }
+
+            if (dayStart > Date.now() / 1000) {
+                // can't see the future
+                drawRect(0, d * 240, width * scale, 240, "#0000007F");
+                addLabel("In the future", dayY + 40);
             }
         }
     }
 
-    function drawLine(x1: number, y1: number, x2: number, y2: number, color: string = "white", width: string|number = 1) {
+    function drawLine(x1: number, y1: number, x2: number, y2: number, color: string = "white", width: string|number = 1): SVGLineElement {
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.x1.baseVal.value = x1;
         line.y1.baseVal.value = y1;
@@ -116,8 +139,9 @@
         line.setAttribute("stroke", color);
         line.setAttribute("stroke-width", String(width));
         chartSvg.append(line);
+        return line;
     }
-    function drawRect(x: number, y: number, w: number, h: number, color: string = "white") {
+    function drawRect(x: number, y: number, w: number, h: number, color: string = "white"): SVGRectElement {
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         rect.x.baseVal.value = x;
         rect.y.baseVal.value = y;
@@ -125,23 +149,32 @@
         rect.height.baseVal.value = h;
         rect.setAttribute("fill", color);
         chartSvg.append(rect);
+        return rect;
     }
     function addDateLabel(date: Date, pos: number) {
-        return addLabel(date.toLocaleDateString(), pos);
+        const dateStr = date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+        return addLabel(dateStr, pos);
     }
     function addLabel(text: string, pos: number) {
         let label = document.createElement("div");
         label.textContent = text;
         label.classList.add("chart-label");
-        label.style.position = "absolute";
         label.style.top = `${pos}px`;
         chartLabels.append(label);
     }
 </script>
 
-<div id="chart-container">
-    <div id="chart-labels" bind:this={chartLabels}></div>
-    <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}></svg>
+<div id="chart-wrapper">
+    <div id="chart-info" style:width="{width * scale + 400}px">
+        <h1>{name}</h1>
+        <div>Creator: {user}</div>
+        <div>Total time: {Math.floor(totalTime / 3600)}h {Math.floor((totalTime % 3600) / 60)}m</div>
+    </div>
+    <div id="chart-info-spacer"></div>
+    <div id="chart-container">
+        <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
+        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}></svg>
+    </div>
 </div>
 
 <style>
@@ -149,18 +182,36 @@
         background: #1F1F1F;
         color: white;
     }
+
+    #chart-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    #chart-info {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid gray;
+    }
+
     #chart-container {
         display: flex;
         justify-content: center;
     }
     #chart-labels {
-        position: relative;
-        width: 0;
+        position: absolute;
+        height: 100%;
         overflow: visible;
+        width: 200px;
+        white-space: nowrap;
+
+        display: flex;
+        flex-direction: column;
+        align-items: end;
     }
-    .chart-label {
+    :global(.chart-label) {
         color: white;
-        
-        right: 0;
+        position: absolute;
     }
 </style>
