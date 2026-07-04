@@ -24,6 +24,7 @@
     } = p.data;
 
     let chartLabels: HTMLDivElement;
+    let chartSvg: SVGSVGElement;
 
     const params = page.url.searchParams;
     
@@ -31,9 +32,9 @@
     const height = 240; // 24 hours
     const barSize = 10;
     const scale = 1/6;
-    const color = "blue";
+    const barColor = "blue";
     const fgcolor = "white";
-    const bgcolor = "#1F1F1F";
+    const bgColor = "#1F1F1F";
 
     const secondsPerDay = 86400;
     const minutesPerLine = 5;
@@ -55,26 +56,15 @@
     let offset = date.getTime() / 1000 + dayOffset * secondsPerDay; // seconds since unix epoch, at start of day
     console.log(offset, "d", date.getTime() / 1000);
 
-    onMount(() => {
-        const canvas = document.getElementById("chart") as HTMLCanvasElement;
-        const ctx = canvas.getContext("2d");
+    onMount(drawSvg);
 
-        if (!ctx) {
-            console.error("ctx is undefined");
-            return;
-        }
-
-        ctx.fillStyle = bgcolor;
-        ctx.fillRect(0, 0, width * scale, height * showDays);
-
-        ctx.fillStyle = color;
+    function drawSvg() {
+        drawRect(0, 0, width * scale, height * showDays, bgColor);
 
         heartbeats.forEach(heartbeat => {
             const start = heartbeat.start_time;
-            const end = heartbeat.end_time;
+            // const end = heartbeat.end_time;
             const duration = heartbeat.duration;
-
-            console.log('>', start, end, duration);
 
             let next: { x1: number; x2: number; y: number } | null = {
                 x1: start % width,
@@ -83,8 +73,6 @@
             }
 
             let c = 0;
-            console.log('>', start, end, duration, next);
-
             while (next) {
                 let { x1, x2, y }: { x1: number; x2: number; y: number } = next;
                 if (x2 >= width) { // overflow
@@ -96,8 +84,7 @@
                     x2 = width;
                 } else next = null;
                 
-                
-                ctx.fillRect(x1 * scale, y, (x2 - x1) * scale, barSize);
+                drawRect(x1 * scale, y, (x2 - x1) * scale, barSize, barColor);
 
                 c++
                 if (c > 99) {
@@ -106,25 +93,39 @@
                 }
             }
         })
-
-
-        ctx.fillStyle = fgcolor;
         for (let m = 1; m < 60; m++) {
-            ctx.globalAlpha = m % minutesPerLine === 0 ? 0.25 : 0.125;
-            ctx.fillRect(m * 60 * scale, 0, 1, height * showDays);
+            let color = `rgba(255, 255, 255, ${m % minutesPerLine === 0 ? 0.25 : 0.125})`;
+            drawRect(m * 60 * scale, 0, 1, height * showDays, color);
         }
         for (let d = 0; d < showDays; d++) {
-            ctx.globalAlpha = 1;
             const dayY = d * 240 - 1;
-            ctx.fillRect(0, dayY, width * scale, 2);
+            drawRect(0, dayY, width * scale, 2, "white");
             addDateLabel(new Date((d * secondsPerDay + offset) * 1000), dayY);
-            ctx.globalAlpha = 0.5;
             for (let h = 1; h < 24; h++) { // 1 to not overlap day line
-                ctx.fillRect(0, d * 240 + h * barSize, width * scale, 1);
+                drawRect(0, d * 240 + h * barSize, width * scale, 1, "#FFFFFF7F");
             }
         }
-    });
+    }
 
+    function drawLine(x1: number, y1: number, x2: number, y2: number, color: string = "white", width: string|number = 1) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.x1.baseVal.value = x1;
+        line.y1.baseVal.value = y1;
+        line.x2.baseVal.value = x2;
+        line.y2.baseVal.value = y2;
+        line.setAttribute("stroke", color);
+        line.setAttribute("stroke-width", String(width));
+        chartSvg.append(line);
+    }
+    function drawRect(x: number, y: number, w: number, h: number, color: string = "white") {
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.x.baseVal.value = x;
+        rect.y.baseVal.value = y;
+        rect.width.baseVal.value = w;
+        rect.height.baseVal.value = h;
+        rect.setAttribute("fill", color);
+        chartSvg.append(rect);
+    }
     function addDateLabel(date: Date, pos: number) {
         return addLabel(date.toLocaleDateString(), pos);
     }
@@ -140,7 +141,7 @@
 
 <div id="chart-container">
     <div id="chart-labels" bind:this={chartLabels}></div>
-    <canvas id="chart" width={width * scale} height={height * showDays}></canvas>
+    <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}></svg>
 </div>
 
 <style>
