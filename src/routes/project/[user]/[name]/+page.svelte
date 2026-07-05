@@ -40,7 +40,8 @@
     const fgcolor = "white";
     const bgColor = "#1F1F1F";
 
-    const secondsPerDay = 86400;
+    const SECONDS_PER_DAY = 86400;
+    const HOURS_PER_DAY = 24;
     const minutesPerThickLine = 5;
     const hoursPerThickLine = 6;
 
@@ -52,7 +53,7 @@
     const [totalHours, totalMinutes] = getHMSFromTime(totalTime);
 
     let dayOffset = -6;
-    let date = new Date(Date.now() + dayOffset * secondsPerDay * 1000);
+    let date = new Date(Date.now() + dayOffset * SECONDS_PER_DAY * 1000);
     let showDays = $state(searchParams.has("days") ? Number(searchParams.get("days")) : 7); // how many days to show
     let ts: string | null = $state(null);
 
@@ -62,13 +63,13 @@
             date = new Date(Date.now());
             showDays = 1;
         } else if (ts === "yesterday") {
-            date = new Date(Date.now() - secondsPerDay * 1000);
+            date = new Date(Date.now() - SECONDS_PER_DAY * 1000);
             showDays = 1;
         } else if (ts === "yesterday-today") {
-            date = new Date(Date.now() - secondsPerDay * 1000);
+            date = new Date(Date.now() - SECONDS_PER_DAY * 1000);
             showDays = 2;
         } else if (/-(\d+)d/.test(ts)) {
-            date = new Date(Date.now() - Number(ts.match(/-(\d+)d/)?.[1]) * secondsPerDay * 1000);
+            date = new Date(Date.now() - Number(ts.match(/-(\d+)d/)?.[1]) * SECONDS_PER_DAY * 1000);
         } else if (ts?.includes('-')) {
             const [year, month, day] = ts.split('-').map(Number);
             date = new Date(year, month - 1, day);
@@ -107,7 +108,7 @@
             use12HourTime
         }, (event, heartbeat, x, y, w) => {
             event.stopPropagation();
-            setFocusedHeartbeat(heartbeat, [`${x - (w < 20 ? 10 - w * 0.5 : 0)}px`, `${y}px`], event.type === "click");
+            setFocusedHeartbeat(heartbeat, [`${x - (w < 20 ? 10 - w * 0.5 : 0)}px`, `${y}px`], event.type === "click" || event.type === "focus");
         });
 
         renderer.drawHeartbeats(heartbeats.filter(hb => hb.end_time >= offset));
@@ -130,6 +131,86 @@
         keepFocusedHeartbeat = keep && heartbeat !== null;
     }
 
+    function handleKey(event: KeyboardEvent) {
+        event.preventDefault();
+        const focused = document.activeElement as SVGElement;
+        console.log(event.key)
+        switch (event.key) {
+            case "Escape":
+                setFocusedHeartbeat(null, null, true);
+                break;
+            case "ArrowLeft":
+                let previousSibling = focused.previousElementSibling;
+                if (previousSibling instanceof SVGRectElement && previousSibling.classList.contains("heartbeat")) previousSibling.focus();
+                break;
+            case "ArrowRight":
+                let nextSibling = focused.nextElementSibling;
+                if (nextSibling instanceof SVGRectElement && nextSibling.classList.contains("heartbeat")) nextSibling.focus();
+                break;
+            case "ArrowUp":
+                let previous: Element | null = focused;
+                while (focused.previousElementSibling) {
+                    previous = previous.previousElementSibling;
+                    if (!(previous instanceof SVGRectElement && previous.classList.contains("heartbeat"))) {
+                        (focused.parentNode?.querySelector("rect.heartbeat") as SVGRectElement)?.focus();
+                        break;
+                    }
+                    if (previous.tabIndex < focused.tabIndex) {
+                        previous.focus();
+                        break;
+                    }
+                }
+                break;
+            case "ArrowDown":
+                let next: Element | null = focused;
+                while (focused.nextElementSibling) {
+                    next = next.nextElementSibling;
+                    if (!(next instanceof SVGRectElement && next.classList.contains("heartbeat"))) {
+                        (focused.parentNode?.querySelector(":nth-last-child(1 of rect.heartbeat)") as SVGRectElement)?.focus();
+                        break;
+                    }
+                    if (next.tabIndex > focused.tabIndex) {
+                        next.focus();
+                        break;
+                    }
+                }
+                break;
+            case "Home":
+                (focused.parentNode?.querySelector("rect.heartbeat") as SVGRectElement)?.focus();
+                break;
+            case "End":
+                (focused.parentNode?.querySelector(":nth-last-child(1 of rect.heartbeat)") as SVGRectElement)?.focus();
+                break;
+            case "PageUp":
+                let prevDay: Element | null = focused;
+                while (focused.previousElementSibling) {
+                    prevDay = prevDay.previousElementSibling;
+                    if (!(prevDay instanceof SVGRectElement && prevDay.classList.contains("heartbeat"))) {
+                        (focused.parentNode?.querySelector("rect.heartbeat") as SVGRectElement)?.focus();
+                        break;
+                    }
+                    if (Math.floor(prevDay.tabIndex / HOURS_PER_DAY) < Math.floor(focused.tabIndex / HOURS_PER_DAY)) {
+                        prevDay.focus();
+                        break;
+                    }
+                }
+                break;
+            case "PageDown":
+                let nextDay: Element | null = focused;
+                while (focused.nextElementSibling) {
+                    nextDay = nextDay.nextElementSibling;
+                    if (!(nextDay instanceof SVGRectElement && nextDay.classList.contains("heartbeat"))) {
+                        (focused.parentNode?.querySelector(":nth-last-child(1 of rect.heartbeat)") as SVGRectElement)?.focus();
+                        break;
+                    }
+                    if (Math.floor(nextDay.tabIndex / HOURS_PER_DAY) > Math.floor(focused.tabIndex / HOURS_PER_DAY)) {
+                        nextDay.focus();
+                        break;
+                    }
+                }
+                break;
+        }
+    }
 </script>
 
 <div id="chart-wrapper">
@@ -138,25 +219,29 @@
         <div>Creator: {user}</div>
         <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
         <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
-        <div><a href={repo_url} target="_blank">{repo_url}</a></div>
-        <button onclick={refresh}>Refresh</button>
+        <div><a href={repo_url} target="_blank" tabindex="1">{repo_url}</a></div>
+        <button onclick={refresh} tabindex="1">Refresh</button>
         <hr>
         <div>
             {#each Object.entries(date_urls) as [text, params], index}
-                {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)}>{text}</a>
+                {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{text}</a>
             {/each}
         </div>
         <div>
             Show days:
             {#each SHOW_DAYS_OPTIONS as days, index}
-                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}days={days}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)}>{days}</a>
+                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}days={days}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days}</a>
             {/each}
         </div>
     </div>
     <div id="chart-info-spacer"></div>
     <div id="chart-container">
         <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
-        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg} onclick={() => setFocusedHeartbeat(null, null, true)} onmousemove={() => setFocusedHeartbeat(null, null)}></svg>
+        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
+            onclick={() => setFocusedHeartbeat(null, null, true)}
+            onkeydown={handleKey}
+            onmousemove={() => setFocusedHeartbeat(null, null)}
+        ></svg>
         {#if focusedHeartbeat && focusedHeartbeatPos}
         {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
         {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
@@ -235,10 +320,11 @@
         height: 10px;
         content: " ";
     }
-    :global(rect.heartbeat:hover) {
+    :global(rect.heartbeat:hover, rect.heartbeat:focus) {
         stroke: white;
         stroke-width: 1px;
         z-index: 99999;
+        outline: none;
     }
 
     :global(svg text, svg line) {
