@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
 
@@ -37,31 +38,42 @@
     const bgColor = "#1F1F1F";
 
     const secondsPerDay = 86400;
-    const minutesPerLine = 5;
+    const minutesPerThickLine = 5;
+    const hoursPerThickLine = 6;
+
+    const use12HourTime = true;
 
     const {user} = page.params;
     
     let totalTime = total_seconds;
 
-    let dayOffset = -2;
+    let dayOffset = -6;
     let date = new Date(Date.now() + dayOffset * secondsPerDay * 1000);
-    
+    let showDays = $state(searchParams.has("days") ? Number(searchParams.get("days")) : 7); // how many days to show
+
     if (searchParams.has("ts")) {
-        const ts = searchParams.get("ts");
-        const [, days] = ts?.match(/-(\d+)d/) ?? [];
-        if (typeof days === "string")
-            date = new Date(Date.now() - Number(days) * secondsPerDay * 1000);
-        else if (ts?.includes('-')) {
+        const ts = searchParams.get("ts")!;
+        if (ts === "today") {
+            date = new Date(Date.now());
+            showDays = 1;
+        } else if (ts === "yesterday") {
+            date = new Date(Date.now() - secondsPerDay * 1000);
+            showDays = 1;
+        } else if (ts === "yesterday-today") {
+            date = new Date(Date.now() - secondsPerDay * 1000);
+            showDays = 2;
+        } else if (/-(\d+)d/.test(ts)) {
+            date = new Date(Date.now() - Number(ts.match(/-(\d+)d/)?.[1]) * secondsPerDay * 1000);
+        } else if (ts?.includes('-')) {
             const [year, month, day] = ts.split('-').map(Number);
             date = new Date(year, month - 1, day);
         } else date = new Date(Number(ts) * 1000);
+        
     }
 
     date.setHours(0, 0, 0, 0);
 
-    let showDays = searchParams.has("days") ? Number(searchParams.get("days")) : 7; // how many days to show
     let offset = date.getTime() / 1000; // seconds since unix epoch, at start of day
-    console.log(offset, "d", date.getTime() / 1000);
 
     onMount(drawSvg);
 
@@ -101,7 +113,7 @@
             }
         })
         for (let m = 0; m <= 60; m++) {
-            let color = `rgba(255, 255, 255, ${m % minutesPerLine === 0 ? 0.25 : 0.125})`;
+            let color = `rgba(255, 255, 255, ${m % minutesPerThickLine === 0 ? 0.25 : 0.125})`;
             let x = m * 60 * scale;
             drawLine(x, 0, x, height * showDays, color);
         }
@@ -110,16 +122,20 @@
             let time = heartbeats.filter(h => h.start_time >= dayStart && h.start_time < dayStart + secondsPerDay).reduce((a, b) => a + b.duration, 0);
             let hours = Math.floor(time / 3600);
             let minutes = Math.floor((time % 3600) / 60);
+            let thisDay = new Date(dayStart * 1000);
 
-            const dayY = d * 240 - 1;
-            drawLine(0, dayY + 1, width * scale, dayY + 1, "white", 2);
+            const dayY = d * 240;
+            drawLine(0, dayY, width * scale, dayY, "white", 2);
             
-            addDateLabel(new Date((d * secondsPerDay + offset) * 1000), dayY);
+            
+            addDateLabel(thisDay, dayY);
             addLabel(`Total: ${hours}h ${minutes}m`, dayY + 20);
-            
+            drawText(1, dayY, use12HourTime ? "12a" : "0", "#7F7F7F", barSize * 0.75);
+
             for (let h = 1; h < 24; h++) { // 1 to not overlap day line
                 let y = d * 240 + h * barSize;
-                drawLine(0, y, width * scale, y, "#FFFFFF7F");
+                drawLine(0, y, width * scale, y, "#FFFFFF7F", h % hoursPerThickLine === 0 ? 2 : 1);
+                drawText(1, y, use12HourTime ? (h > 12 ? `${h - 12}p` : h === 12 ? "12p" : `${h}a`) : `${h}`, "#7F7F7F", barSize * 0.75);
             }
 
             if (dayStart > Date.now() / 1000) {
@@ -127,7 +143,12 @@
                 drawRect(0, d * 240, width * scale, 240, "#0000007F");
                 addLabel("In the future", dayY + 40);
             }
+            if (dayStart === new Date().setHours(0, 0, 0, 0) / 1000) {
+                addLabel("Today", dayY + 40);
+            }
         }
+        drawLine(0, showDays * 240, width * scale, showDays * 240, "white", 2);
+
     }
 
     function drawLine(x1: number, y1: number, x2: number, y2: number, color: string = "white", width: string|number = 1): SVGLineElement {
@@ -151,6 +172,16 @@
         chartSvg.append(rect);
         return rect;
     }
+    function drawText(x: number, y: number, content: string, color: string = "white", size: string|number = 12): SVGTextElement {
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", String(x));
+        text.setAttribute("y", String(y + Number(size))); // y is baseline
+        text.setAttribute("fill", color);
+        text.setAttribute("font-size", String(size));
+        text.textContent = content;
+        chartSvg.append(text);
+        return text;
+    }
     function addDateLabel(date: Date, pos: number) {
         const dateStr = date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
         return addLabel(dateStr, pos);
@@ -162,6 +193,11 @@
         label.style.top = `${pos}px`;
         chartLabels.append(label);
     }
+
+    function refresh() {
+        invalidateAll();
+        location.reload();
+    }
 </script>
 
 <div id="chart-wrapper">
@@ -169,6 +205,8 @@
         <h1>{name}</h1>
         <div>Creator: {user}</div>
         <div>Total time: {Math.floor(totalTime / 3600)}h {Math.floor((totalTime % 3600) / 60)}m</div>
+        <div><a href={repo_url} target="_blank">{repo_url}</a></div>
+        <button onclick={refresh}>Refresh</button>
     </div>
     <div id="chart-info-spacer"></div>
     <div id="chart-container">
@@ -213,5 +251,13 @@
     :global(.chart-label) {
         color: white;
         position: absolute;
+    }
+
+    a {
+        color: #7F7FFF;
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
     }
 </style>
