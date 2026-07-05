@@ -1,6 +1,6 @@
-const secondsPerDay = 86400;
+const SECONDS_PER_DAY = 86400;
 
-interface DrawSvgOptions {
+export interface DrawSvgOptions {
   width: number;
   height: number;
   scale: number;
@@ -14,8 +14,8 @@ interface DrawSvgOptions {
   use12HourTime: boolean;
 }
 
-interface TimeRenderer<T> {
-    draw(heartbeats: HeartbeatSpan[]): void;
+export interface TimeRenderer<T> {
+    drawHeartbeats(heartbeats: HeartbeatSpan[]): void;
     drawLine(x1: number, y1: number, x2: number, y2: number, color?: string, width?: string|number): T;
     drawRect(x: number, y: number, w: number, h: number, color?: string): T;
     drawText(x: number, y: number, content: string, color?: string, size?: string|number): T;
@@ -23,17 +23,22 @@ interface TimeRenderer<T> {
     addLabel(text: string, pos: number): void;
 }
 
-class SVGTimeRenderer implements TimeRenderer<SVGElement> {
-    constructor(readonly chartSvg: SVGElement, readonly chartLabels: HTMLElement, readonly options: DrawSvgOptions) {}
+export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
+    constructor(
+        readonly chartSvg: SVGElement,
+        readonly chartLabels: HTMLElement,
+        readonly options: DrawSvgOptions,
+        readonly barClickEvent: (event: MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number) => void
+    ) {}
 
-    draw(heartbeats: HeartbeatSpan[]) {
+    drawHeartbeats(heartbeats: HeartbeatSpan[]) {
         const {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime} = this.options;
         this.drawRect(0, 0, width * scale, height * showDays, bgColor);
 
+        // Draw heartbeats
         heartbeats.forEach(heartbeat => {
-            const start = heartbeat.start_time;
+            const {start_time: start, duration} = heartbeat;
             // const end = heartbeat.end_time;
-            const duration = heartbeat.duration;
 
             let next: { x1: number; x2: number; y: number } | null = {
                 x1: start % width,
@@ -53,7 +58,7 @@ class SVGTimeRenderer implements TimeRenderer<SVGElement> {
                     x2 = width;
                 } else next = null;
                 
-                this.drawRect(x1 * scale, y, (x2 - x1) * scale, barSize, barColor);
+                this.drawHeartbeatRect(heartbeat, start, x1 * scale, y, (x2 - x1) * scale, barSize, barColor);
 
                 c++
                 if (c > 99) {
@@ -62,14 +67,16 @@ class SVGTimeRenderer implements TimeRenderer<SVGElement> {
                 }
             }
         })
+
+        // Draw grid lines
         for (let m = 0; m <= 60; m++) {
             let color = `rgba(255, 255, 255, ${m % minutesPerThickLine === 0 ? 0.25 : 0.125})`;
             let x = m * 60 * scale;
             this.drawLine(x, 0, x, height * showDays, color);
         }
         for (let d = 0; d < showDays; d++) {
-            let dayStart = d * secondsPerDay + offset;
-            let time = heartbeats.filter(h => h.start_time >= dayStart && h.start_time < dayStart + secondsPerDay).reduce((a, b) => a + b.duration, 0);
+            let dayStart = d * SECONDS_PER_DAY + offset;
+            let time = heartbeats.filter(h => h.start_time >= dayStart && h.start_time < dayStart + SECONDS_PER_DAY).reduce((a, b) => a + b.duration, 0);
             let hours = Math.floor(time / 3600);
             let minutes = Math.floor((time % 3600) / 60);
             let thisDay = new Date(dayStart * 1000);
@@ -99,6 +106,14 @@ class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         }
         this.drawLine(0, showDays * 240, width * scale, showDays * 240, "white", 2);
 
+    }
+
+    drawHeartbeatRect(heartbeat: HeartbeatSpan, time: number, x: number, y: number, w: number, h: number, color: string = "white"): SVGRectElement {
+        const rect = this.drawRect(x, y, w, h, color);
+        rect.classList.add("heartbeat");
+        rect.id = `heartbeat-${time}`;
+        rect.addEventListener("click", event => this.barClickEvent(event, heartbeat, x, y));
+        return rect;
     }
 
     drawLine(x1: number, y1: number, x2: number, y2: number, color: string = "white", width: string|number = 1): SVGLineElement {
@@ -132,6 +147,7 @@ class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         this.chartSvg.append(text);
         return text;
     }
+
     addDateLabel(date: Date, pos: number) {
         const dateStr = date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
         return this.addLabel(dateStr, pos);

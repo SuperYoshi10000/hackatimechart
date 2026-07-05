@@ -5,7 +5,7 @@ interface HeartbeatSpan {
     duration: any;
     start_time: number;
     end_time: number;
-    project: string;
+    project?: string;
 }
 
 interface Project {

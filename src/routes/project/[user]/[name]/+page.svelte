@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
-  import { page } from "$app/state";
-  import { onMount } from "svelte";
+    import { invalidateAll } from "$app/navigation";
+    import { page } from "$app/state";
+    import { onMount } from "svelte";
+
+    import { SVGTimeRenderer } from "$lib/time-render";
+    import { getHMSFromTime } from "$lib/util";
 
     let p = $props();
     let {
@@ -46,6 +49,7 @@
     const {user} = page.params;
     
     let totalTime = total_seconds;
+    const [totalHours, totalMinutes] = getHMSFromTime(totalTime);
 
     let dayOffset = -6;
     let date = new Date(Date.now() + dayOffset * secondsPerDay * 1000);
@@ -74,26 +78,52 @@
     date.setHours(0, 0, 0, 0);
 
     let offset = date.getTime() / 1000; // seconds since unix epoch, at start of day
+    
 
     onMount(draw);
 
     function draw() {
-        const renderer = new SVGTimeRenderer(chartSvg, chartLabels, {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime})
+        const renderer = new SVGTimeRenderer(chartSvg, chartLabels, {
+            width,
+            height,
+            scale,
+            offset,
+            showDays,
+            bgColor,
+            barColor,
+            barSize,
+            minutesPerThickLine,
+            hoursPerThickLine,
+            use12HourTime
+        }, (event, heartbeat, x, y) => {
+            setFocusedHeartbeat(heartbeat, [`${x}px`, `${y}px`]);
+        });
 
-        renderer.draw(heartbeats);
+        renderer.drawHeartbeats(heartbeats);
     }
 
     function refresh() {
         invalidateAll();
         location.reload();
     }
+
+
+    let focusedHeartbeat: HeartbeatSpan | null = $state(null);
+    let focusedHeartbeatPos: [string, string] | null = $state(null);
+
+    function setFocusedHeartbeat(heartbeat: HeartbeatSpan | null, pos: [string, string] | null) {
+        focusedHeartbeat = heartbeat;
+        focusedHeartbeatPos = pos;
+    }
+
 </script>
 
 <div id="chart-wrapper">
     <div id="chart-info" style:width="{width * scale + 400}px">
         <h1>{name}</h1>
         <div>Creator: {user}</div>
-        <div>Total time: {Math.floor(totalTime / 3600)}h {Math.floor((totalTime % 3600) / 60)}m</div>
+        <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
+        <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
         <div><a href={repo_url} target="_blank">{repo_url}</a></div>
         <button onclick={refresh}>Refresh</button>
     </div>
@@ -101,6 +131,17 @@
     <div id="chart-container">
         <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
         <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}></svg>
+        {#if focusedHeartbeat && focusedHeartbeatPos}
+        {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
+        {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
+        {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
+        <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
+            <div>
+                {focusedHeartbeat.project || name}<br>
+                {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
+            </div>
+        </div>
+    {/if}
     </div>
 </div>
 
@@ -122,7 +163,16 @@
         border-bottom: 2px solid gray;
     }
 
+    a {
+        color: #7F7FFF;
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+
     #chart-container {
+        position: relative;
         display: flex;
         justify-content: center;
     }
@@ -142,11 +192,26 @@
         position: absolute;
     }
 
-    a {
-        color: #7F7FFF;
-        text-decoration: none;
+
+    #heartbeat-info {
+        position: absolute;
+        left: 0;
+        top: 15px;
+        background: gray;
+        padding: 5px;
+        border-radius: 5px;
     }
-    a:hover {
-        text-decoration: underline;
+    #heartbeat-info::before {
+        position: absolute;
+        background: url('data:image/svg+xml,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><path d="M5 0 l5 5 l-5 5 l-5 -5 z" fill="gray"/></svg>');
+        translate: 0 -10px;
+        width: 10px;
+        height: 10px;
+        content: "."
+    }
+    :global(rect.heartbeat:hover) {
+        stroke: white;
+        stroke-width: 1px;
+        z-index: 99999;
     }
 </style>
