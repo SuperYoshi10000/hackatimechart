@@ -28,7 +28,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         readonly chartSvg: SVGElement,
         readonly chartLabels: HTMLElement,
         readonly options: DrawSvgOptions,
-        readonly barClickEvent: (event: MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number) => void
+        readonly barClickEvent: (event: MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number, w: number) => void
     ) {}
 
     drawHeartbeats(heartbeats: HeartbeatSpan[]) {
@@ -112,7 +112,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         const rect = this.drawRect(x, y, w, h, color);
         rect.classList.add("heartbeat");
         rect.id = `heartbeat-${time}`;
-        rect.addEventListener("click", event => this.barClickEvent(event, heartbeat, x, y));
+        rect.addEventListener("click", event => this.barClickEvent(event, heartbeat, x, y, w));
         return rect;
     }
 

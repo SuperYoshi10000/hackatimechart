@@ -95,8 +95,9 @@
             minutesPerThickLine,
             hoursPerThickLine,
             use12HourTime
-        }, (event, heartbeat, x, y) => {
-            setFocusedHeartbeat(heartbeat, [`${x}px`, `${y}px`]);
+        }, (event, heartbeat, x, y, w) => {
+            event.stopPropagation();
+            setFocusedHeartbeat(heartbeat, [`${x - (w < 20 ? 10 - w * 0.5 : 0)}px`, `${y}px`]);
         });
 
         renderer.drawHeartbeats(heartbeats);
@@ -109,7 +110,7 @@
 
 
     let focusedHeartbeat: HeartbeatSpan | null = $state(null);
-    let focusedHeartbeatPos: [string, string] | null = $state(null);
+    let focusedHeartbeatPos: [string, string] | null = $state(null); // x, y
 
     function setFocusedHeartbeat(heartbeat: HeartbeatSpan | null, pos: [string, string] | null) {
         focusedHeartbeat = heartbeat;
@@ -130,7 +131,7 @@
     <div id="chart-info-spacer"></div>
     <div id="chart-container">
         <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
-        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}></svg>
+        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg} onclick={() => setFocusedHeartbeat(null, null)}></svg>
         {#if focusedHeartbeat && focusedHeartbeatPos}
         {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
         {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
@@ -204,14 +205,19 @@
     #heartbeat-info::before {
         position: absolute;
         background: url('data:image/svg+xml,<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><path d="M5 0 l5 5 l-5 5 l-5 -5 z" fill="gray"/></svg>');
-        translate: 0 -10px;
+        translate: 0 -9px;
         width: 10px;
         height: 10px;
-        content: "."
+        content: " ";
     }
     :global(rect.heartbeat:hover) {
         stroke: white;
         stroke-width: 1px;
         z-index: 99999;
+    }
+
+    :global(svg text, svg line) {
+        pointer-events: none;
+        user-select: none;
     }
 </style>
