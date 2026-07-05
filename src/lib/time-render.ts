@@ -113,6 +113,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         rect.classList.add("heartbeat");
         rect.id = `heartbeat-${time}`;
         rect.addEventListener("click", event => this.barClickEvent(event, heartbeat, x, y, w));
+        rect.addEventListener("mousemove", event => this.barClickEvent(event, heartbeat, x, y, w));
         return rect;
     }
 
