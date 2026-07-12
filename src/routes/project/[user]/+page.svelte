@@ -68,10 +68,7 @@
             showDays = 2;
         } else if (/-(\d+)d/.test(ts)) {
             date = new Date(Date.now() - Number(ts.match(/-(\d+)d/)?.[1]) * SECONDS_PER_DAY * 1000);
-        } else if (ts?.includes('-')) {
-            const [year, month, day] = ts.split('-').map(Number);
-            date = new Date(year, month - 1, day);
-        } else date = new Date(Number(ts) * 1000);
+        } else date = new Date(ts);
         
     }
 
@@ -113,8 +110,12 @@
         const mergedHeartbeats: HeartbeatSpan[] = allHeartbeats
             .flatMap(([name, heartbeats], i) => heartbeats
                 .filter(hb => hb.end_time >= offset)
-                .map(hb => ({ ...hb, project: name, color: `hsl(${(i * 360 / allHeartbeats.length + barColorOffset) % 360} 100 50)` })));
+                .map(hb => ({ ...hb, project: name, color: getColor(i, allHeartbeats.length) })));
         renderer.drawAll(mergedHeartbeats);
+    }
+
+    function getColor(index: number, total: number) {
+        return `hsl(${(index * 360 / total + barColorOffset) % 360} 100 50)`;
     }
 
     function refresh(event?: Event) {
@@ -244,6 +245,13 @@
             onkeydown={handleKey}
             onmousemove={() => setFocusedHeartbeat(null, null)}
         ></svg>
+        <div id="chart-key" style:left="calc(50% + {width * scale / 2 + 5}px)">
+            {#each allHeartbeats as [name], i}
+                <div class="chart-key-item">
+                    <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>{name}
+                </div>
+            {/each}
+        </div>
         {#if focusedHeartbeat && focusedHeartbeatPos}
         {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
         {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
@@ -305,6 +313,15 @@
         position: absolute;
     }
 
+    #chart-key {
+        position: absolute;
+        width: max-content;
+    }
+    .chart-key-marker {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+    }
 
     #heartbeat-info {
         position: absolute;

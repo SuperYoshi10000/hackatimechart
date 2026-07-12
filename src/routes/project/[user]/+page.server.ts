@@ -1,8 +1,8 @@
-import { API_PROJECT_URL, API_PROJECT_NAMES_URL, API_USER_STATS_URL, API_TRUST_FACTOR_URL, API_HEARTBEAT_URL } from "$env/static/private";
+import { API_PROJECT_URL, API_PROJECT_NAMES_URL, API_USER_STATS_URL, API_TRUST_FACTOR_URL, API_HEARTBEAT_URL, API_PROJECT_DETAILS_URL } from "$env/static/private";
 import type { HeartbeatSpan, HeartbeatSpanList, UserStats } from "$lib/types";
 import util from 'util';
 
-export async function load({params}) {
+export async function load({url, params}) {
     const {user} = params;
     
     const statsUrl = util.format(API_USER_STATS_URL, user);
@@ -23,9 +23,20 @@ export async function load({params}) {
     };
     
 
-    const projectNamesUrl = util.format(API_PROJECT_NAMES_URL, user);
-    const projects: {projects: string[]} = await fetch(projectNamesUrl).then(res => res.json());
-    const allHeartbeats = (await Promise.allSettled(projects.projects.map<Promise<[string, HeartbeatSpan[]]>>(async name => {
+    let projectNames: string[];
+    if (url.searchParams.has("start")) {
+        const range = url.searchParams.get("start");
+        const projectDetailsUrl = util.format(API_PROJECT_DETAILS_URL, user) + (range !== "all" ? `?start=${range}` : "");
+        const projects: { name: string }[] = (await fetch(projectDetailsUrl).then(res => res.json())).projects;
+        projectNames = projects.map(p => p.name);
+    } else {
+        const projectNamesUrl = util.format(API_PROJECT_NAMES_URL, user);
+        projectNames = (await fetch(projectNamesUrl).then(res => res.json())).projects;
+    }
+
+
+
+    const allHeartbeats = (await Promise.allSettled(projectNames.map<Promise<[string, HeartbeatSpan[]]>>(async name => {
         const heartbeatUrl = util.format(API_HEARTBEAT_URL, user, name);
         const heartbeats: HeartbeatSpanList = await fetch(heartbeatUrl).then(async res => {
             if (res.ok) return res.json();

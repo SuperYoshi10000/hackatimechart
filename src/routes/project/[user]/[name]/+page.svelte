@@ -73,10 +73,7 @@
             showDays = 2;
         } else if (/-(\d+)d/.test(ts)) {
             date = new Date(Date.now() - Number(ts.match(/-(\d+)d/)?.[1]) * SECONDS_PER_DAY * 1000);
-        } else if (ts?.includes('-')) {
-            const [year, month, day] = ts.split('-').map(Number);
-            date = new Date(year, month - 1, day);
-        } else date = new Date(Number(ts) * 1000);
+        } else date = new Date(ts);
         
     }
 
