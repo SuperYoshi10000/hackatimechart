@@ -1,42 +1,18 @@
-# sv
+# Hackatime Chart
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Creating a project
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Installation and Running
 
+To install:
 ```sh
-# create a new project
-npx sv create my-app
+git clone https://github.com/SuperYoshi10000/hackatimechart
+pnpm i
 ```
+Also, copy the `.env.example` file and rename it to `.env`. No values need to be changed here.
 
-To recreate this project with the same configuration:
-
+To run:
 ```sh
-# recreate this project
-pnpm dlx sv@0.15.3 create --template minimal --types ts --install pnpm ./
+pnpx vite --port=<port-to-run-on>
+# Example: pnpx vite --port=4000
 ```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
