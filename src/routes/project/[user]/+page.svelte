@@ -3,30 +3,16 @@
     import { page } from "$app/state";
     import { onMount } from "svelte";
 
-    import { SVGTimeRenderer, type TimeRenderer } from "$lib/time-render";
+    import { SVGTimeRenderer } from "$lib/time-render";
+    import type { AllHeartbeats, HeartbeatSpan, UserStats } from "$lib/types";
     import { getHMSFromTime } from "$lib/util";
-    import type { HeartbeatSpan } from "$lib/types";
 
     let p = $props();
     let {
-        heartbeats,
-        name,
-        total_seconds,
-        languages,
-        repo_url,
-        total_heartbeats,
-        first_heartbeat,
-        last_heartbeat
-    }: {
-        heartbeats: HeartbeatSpan[];
-        name: string;
-        total_seconds: number;
-        languages: string[];
-        repo_url: string;
-        total_heartbeats: number;
-        first_heartbeat: string;
-        last_heartbeat: string;
-    } = p.data;
+        allHeartbeats,
+        data,
+        trust_factor
+    }: UserStats & { allHeartbeats: AllHeartbeats } = p.data;
 
     let chartLabels: HTMLDivElement;
     let chartSvg: SVGSVGElement;
@@ -37,6 +23,7 @@
     const height = 240; // 24 hours
     const barSize = 10;
     const scale = 1/6;
+    const barColorOffset = 200;
     const barColor = "hsl(200, 100%, 50%)";
     const fgcolor = "white";
     const bgColor = "#1F1F1F";
@@ -50,8 +37,16 @@
 
     const {name: p_name, user} = page.params;
     
-    let totalTime = total_seconds;
+    let totalTime = data?.total_seconds ?? 0;
     const [totalHours, totalMinutes] = getHMSFromTime(totalTime);
+    const [averageHours, averageMinutes] = getHMSFromTime(data?.daily_average ?? 0);
+
+    const TRUST_FACTORS = {
+        "blue": "Blue - Normal",
+        "green": "Green - Trusted",
+        "red": "Red - Banned"
+    }
+    const trustFactorText = TRUST_FACTORS[trust_factor.trust_level];
 
     const DEFAULT_SHOW_DAYS = 7;
 
@@ -115,7 +110,11 @@
             setFocusedHeartbeat(heartbeat, [`${x - (w < 20 ? 10 - w * 0.5 : 0)}px`, `${y}px`], event.type === "click" || event.type === "focus");
         });
 
-        renderer.drawAll(heartbeats.filter(hb => hb.end_time >= offset));
+        const mergedHeartbeats: HeartbeatSpan[] = allHeartbeats
+            .flatMap(([name, heartbeats], i) => heartbeats
+                .filter(hb => hb.end_time >= offset)
+                .map(hb => ({ ...hb, project: name, color: `hsl(${(i * 360 / allHeartbeats.length + barColorOffset) % 360} 100 50)` })));
+        renderer.drawAll(mergedHeartbeats);
     }
 
     function refresh(event?: Event) {
@@ -219,11 +218,10 @@
 
 <div id="chart-wrapper">
     <div id="chart-info" style:width="{width * scale + 400}px">
-        <h1>{name}</h1>
-        <div>Creator: {user}</div>
-        <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
-        <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
-        <div><a href={repo_url} target="_blank" tabindex="1">{repo_url}</a></div>
+        <h1>{user}</h1>
+        <div>Total time: {totalHours}h {totalMinutes}m</div>
+        <!-- <div>Average: {averageHours}h {averageMinutes}m</div> (This is misleading so I removed it) -->
+        <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
         <button onclick={refresh} tabindex="1">Refresh</button>
         <hr>
         <div>
@@ -252,7 +250,7 @@
         {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
         <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
             <div>
-                {focusedHeartbeat.project || name}<br>
+                {focusedHeartbeat.project}<br>
                 {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
             </div>
         </div>

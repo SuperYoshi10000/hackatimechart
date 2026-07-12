@@ -1,3 +1,5 @@
+import type { HeartbeatSpan } from "./types";
+
 const SECONDS_PER_DAY = 86400;
 
 export interface DrawSvgOptions {
@@ -15,7 +17,11 @@ export interface DrawSvgOptions {
 }
 
 export interface TimeRenderer<T> {
-    drawHeartbeats(heartbeats: HeartbeatSpan[]): void;
+    drawAll(heartbeats: HeartbeatSpan[], color?: string): void;
+    drawBackground(): void;
+    drawHeartbeats(heartbeats: HeartbeatSpan[], color?: string): void;
+    drawGrid(heartbeats: HeartbeatSpan[]): void;
+    
     drawLine(x1: number, y1: number, x2: number, y2: number, color?: string, width?: string|number): T;
     drawRect(x: number, y: number, w: number, h: number, color?: string): T;
     drawText(x: number, y: number, content: string, color?: string, size?: string|number): T;
@@ -24,6 +30,9 @@ export interface TimeRenderer<T> {
 }
 
 export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
+    focusedHeartbeat: SVGUseElement | null = null;
+    hasFocusedHeartbeat = false;
+
     constructor(
         readonly chartSvg: SVGElement,
         readonly chartLabels: HTMLElement,
@@ -31,9 +40,29 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         readonly barClickEvent: (event: FocusEvent | MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number, w: number) => void
     ) {}
 
-    drawHeartbeats(heartbeats: HeartbeatSpan[]) {
+    drawAll(heartbeats: HeartbeatSpan[], color: string = this.options.barColor) {
+        this.drawBackground();
+        this.drawHeartbeats(heartbeats, color);
+        this.drawGrid(heartbeats);
+
+        this.focusedHeartbeat = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        this.chartSvg.appendChild(this.focusedHeartbeat);
+    }
+
+
+    drawBackground() {
         const {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime} = this.options;
-        this.drawRect(0, 0, width * scale, height * showDays, bgColor);
+        const rect = this.drawRect(0, 0, width * scale, height * showDays, bgColor);
+
+        rect.addEventListener("click", event => this.clearFocus(true));
+        rect.addEventListener("mousemove", event => this.clearFocus());
+
+    }
+
+    drawHeartbeats(heartbeats: HeartbeatSpan[], color: string = this.options.barColor) {
+        const {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime} = this.options;
+
+        heartbeats.sort((a, b) => a.start_time - b.start_time); // keyboard navigation breaks without this
 
         // Draw heartbeats
         heartbeats.forEach(heartbeat => {
@@ -58,7 +87,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
                     x2 = width;
                 } else next = null;
                 
-                this.drawHeartbeatRect(heartbeat, start, x1 * scale, y, (x2 - x1) * scale, barSize, barColor);
+                this.drawHeartbeatRect(heartbeat, start, x1 * scale, y, (x2 - x1) * scale, barSize, heartbeat.color ||color);
 
                 c++
                 if (c > 99) {
@@ -66,9 +95,12 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
                     break;
                 }
             }
-        })
+        });
+    }
 
-        // Draw grid lines
+    drawGrid(heartbeats: HeartbeatSpan[]) {
+        const {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime} = this.options;
+
         for (let m = 0; m <= 60; m++) {
             let color = `rgba(255, 255, 255, ${m % minutesPerThickLine === 0 ? 0.25 : 0.125})`;
             let x = m * 60 * scale;
@@ -105,16 +137,15 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
             }
         }
         this.drawLine(0, showDays * 240, width * scale, showDays * 240, "white", 2);
-
     }
 
     drawHeartbeatRect(heartbeat: HeartbeatSpan, time: number, x: number, y: number, w: number, h: number, color: string = "white"): SVGRectElement {
         const rect = this.drawRect(x, y, w, h, color);
         rect.classList.add("heartbeat");
         rect.id = `heartbeat-${time}`;
-        rect.addEventListener("focus", event => this.barClickEvent(event, heartbeat, x, y, w));
-        rect.addEventListener("click", event => this.barClickEvent(event, heartbeat, x, y, w));
-        rect.addEventListener("mousemove", event => this.barClickEvent(event, heartbeat, x, y, w));
+        rect.addEventListener("focus", event => this.focusBar(event, heartbeat, x, y, w, true));
+        rect.addEventListener("click", event => this.focusBar(event, heartbeat, x, y, w, true));
+        rect.addEventListener("mousemove", event => this.focusBar(event, heartbeat, x, y, w));
         rect.tabIndex = y / this.options.barSize;
         return rect;
     }
@@ -161,5 +192,18 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         label.classList.add("chart-label");
         label.style.top = `${pos}px`;
         this.chartLabels.append(label);
+    }
+
+    focusBar(event: FocusEvent | MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number, w: number, force: boolean = false) {
+        event.stopPropagation();
+        if (this.hasFocusedHeartbeat && !force) return;
+        this.focusedHeartbeat!.href.baseVal = `#heartbeat-${heartbeat.start_time}`;
+        this.barClickEvent(event, heartbeat, x, y, w);
+        this.hasFocusedHeartbeat = true;
+    }
+    clearFocus(force: boolean = false) {
+        if (this.hasFocusedHeartbeat && !force) return;
+        this.focusedHeartbeat!.href.baseVal = "";
+        this.hasFocusedHeartbeat = false;
     }
 }

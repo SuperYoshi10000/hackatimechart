@@ -1,4 +1,5 @@
 import { API_PROJECT_URL, API_HEARTBEAT_URL } from "$env/static/private";
+import type { Project, HeartbeatSpanList } from "$lib/types";
 import util from 'util';
 
 export async function load({params}) {
