@@ -333,4 +333,9 @@
         pointer-events: none;
         user-select: none;
     }
+
+    :global(svg use) {
+        pointer-events: none;
+        user-select: none;
+    }
 </style>

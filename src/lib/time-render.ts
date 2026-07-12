@@ -199,7 +199,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         if (this.hasFocusedHeartbeat && !force) return;
         this.focusedHeartbeat!.href.baseVal = `#heartbeat-${heartbeat.start_time}`;
         this.barClickEvent(event, heartbeat, x, y, w);
-        this.hasFocusedHeartbeat = true;
+        if (force) this.hasFocusedHeartbeat = true;
     }
     clearFocus(force: boolean = false) {
         if (this.hasFocusedHeartbeat && !force) return;
