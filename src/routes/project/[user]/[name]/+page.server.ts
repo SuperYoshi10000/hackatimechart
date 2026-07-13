@@ -8,7 +8,14 @@ export async function load({url, params}) {
     const projectUrl = util.format(API_PROJECT_URL, user, name);
     const heartbeatUrl = util.format(API_HEARTBEAT_URL, user, name);
 
-    const project: Project = await fetch(projectUrl).then(res => res.json());
+    const project: Project = await fetch(projectUrl).then(res => {
+        if (res.ok) return res.json();
+        return res.status;
+    });
+
+    if (typeof project === "number") return {
+        status: project
+    }
 
     const heartbeats: HeartbeatSpanList = await fetch(heartbeatUrl).then(async res => {
         if (res.ok) return res.json();
@@ -20,5 +27,6 @@ export async function load({url, params}) {
     return {
         ...project,
         heartbeats: heartbeats.spans,
+        status: 200
     }
 }

@@ -3,7 +3,9 @@
     let { day, week, month } = p.data;
 </script>
 
-<title>Banned Users | Hackatime Chart</title>
+<svelte:head>
+    <title>Banned Users | Hackatime Chart</title>
+</svelte:head>
 
 <div>
     <h1>Banned Users</h1>

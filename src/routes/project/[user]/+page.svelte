@@ -7,12 +7,15 @@
     import type { AllHeartbeats, HeartbeatSpan, UserStats } from "$lib/types";
     import { getHMSFromTime } from "$lib/util";
 
+    type UserData = UserStats & { allHeartbeats: AllHeartbeats, status?: number };
+
     let p = $props();
     let {
-        allHeartbeats,
+        allHeartbeats = [],
         data,
-        trust_factor
-    }: UserStats & { allHeartbeats: AllHeartbeats } = p.data;
+        trust_factor,
+        status
+    }: UserData = p.data;
 
     let chartLabels: HTMLDivElement;
     let chartSvg: SVGSVGElement;
@@ -46,7 +49,7 @@
         "green": "🟢 Green - Trusted",
         "red": "🟥 Red - Banned"
     }
-    const trustFactorText = TRUST_FACTORS[trust_factor.trust_level];
+    const trustFactorText = TRUST_FACTORS[trust_factor?.trust_level] || "Unknown";
 
     const DEFAULT_SHOW_DAYS = 7;
 
@@ -90,6 +93,7 @@
 
     let renderer: SVGTimeRenderer;
     function draw() {
+        if (status !== 200) return;
         renderer = new SVGTimeRenderer(chartSvg, chartLabels, {
             width,
             height,
@@ -220,64 +224,80 @@
     }
 </script>
 
-<title>{user} | Hackatime Chart</title>
+<svelte:head>
+    <title>{user}{status !== 200 ? " (Not found)" : ""} | Hackatime Chart</title>
+</svelte:head>
 
 <div id="chart-wrapper">
-    <div id="chart-info" style:width="{width * scale + 400}px">
-        <h1>{user}</h1>
-        <div>Total time: {totalHours}h {totalMinutes}m</div>
-        <!-- <div>Average: {averageHours}h {averageMinutes}m</div> (This is misleading so I removed it) -->
-        <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: <span style:font-style="normal">🟡</span> Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
-        <button onclick={refresh} tabindex="1">Refresh</button>
-        <hr>
-        <div>
-            {#each Object.entries(DATE_OPTIONS) as [text, params], index}
-                {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{text}</a>
-            {/each}
-        </div>
-        <div>
-            Show days:
-            {#each SHOW_DAYS_OPTIONS as days, index}
-                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
-            {/each}
-        </div>
-    </div>
-    <div id="chart-info-spacer"></div>
-    <div id="chart-container">
-        <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
-        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
-            onclick={() => setFocusedHeartbeat(null, null, true)}
-            onkeydown={handleKey}
-            onmousemove={() => setFocusedHeartbeat(null, null)}
-        ></svg>
-        <div id="chart-key" style:left="calc(50% + {width * scale / 2 + 5}px)">
-            {#each allHeartbeats as [name, heartbeats], i}
-                {@const totalTime = heartbeats.reduce((a, b) => a + b.duration, 0)}
-                {@const [hours, minutes] = getHMSFromTime(totalTime)}
-                <div class="chart-key-item">
-                    <!-- <label class="chart-key-toggle">
-                        <input type="checkbox" checked>
-                        <span></span>
-                    </label> -->
-                    <a href="/project/{user}/{name}{page.url.search}" style:color={fgColor} title="{name} | Total: {hours}h {minutes}m ({heartbeats.length} heartbeats)">
-                        <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>
-                        {name}
-                    </a>
-                </div>
-            {/each}
-        </div>
-        {#if focusedHeartbeat && focusedHeartbeatPos}
-        {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
-        {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
-        {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
-        <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
+    {#if status === 200}
+        <div id="chart-info" style:width="{width * scale + 400}px">
+            <h1>{user}</h1>
+            <div>Total time: {totalHours}h {totalMinutes}m</div>
+            <!-- <div>Average: {averageHours}h {averageMinutes}m</div> (This is misleading so I removed it) -->
+            <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: <span style:font-style="normal">🟡</span> Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
+            <button onclick={refresh} tabindex="1">Refresh</button>
+            <hr>
             <div>
-                {focusedHeartbeat.project}<br>
-                {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
+                {#each Object.entries(DATE_OPTIONS) as [text, params], index}
+                    {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{text}</a>
+                {/each}
+            </div>
+            <div>
+                Show days:
+                {#each SHOW_DAYS_OPTIONS as days, index}
+                    {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
+                {/each}
             </div>
         </div>
+        <div id="chart-info-spacer"></div>
+        <div id="chart-container">
+            <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
+            <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
+                onclick={() => setFocusedHeartbeat(null, null, true)}
+                onkeydown={handleKey}
+                onmousemove={() => setFocusedHeartbeat(null, null)}
+            ></svg>
+            <div id="chart-key" style:left="calc(50% + {width * scale / 2 + 5}px)">
+                <div>
+                    <h2>Projects</h2>
+                    <input />
+                </div>
+                {#each allHeartbeats as [name, heartbeats], i}
+                    {@const totalTime = heartbeats.reduce((a, b) => a + b.duration, 0)}
+                    {@const [hours, minutes] = getHMSFromTime(totalTime)}
+                    <div class="chart-key-item">
+                        <!-- <label class="chart-key-toggle">
+                            <input type="checkbox" checked>
+                            <span></span>
+                        </label> -->
+                        <a href="/project/{user}/{name}{page.url.search}" style:color={fgColor} title="{name} | Total: {hours}h {minutes}m ({heartbeats.length} heartbeats)">
+                            <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>
+                            {name}
+                        </a>
+                    </div>
+                {/each}
+            </div>
+            {#if focusedHeartbeat && focusedHeartbeatPos}
+                {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
+                {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
+                {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
+                <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
+                    <div>
+                        {focusedHeartbeat.project}<br>
+                        {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
+                    </div>
+                </div>
+            {/if}
+        </div>
+    {:else}
+        <h1>User {user} not found</h1>
+        {#if status === 403}
+            <p>This user may exist, but they have disabled public stats lookup.</p>
+            <p>If this is you, try enabling public stats lookup in <a href="https://hackatime.hackclub.com/my/settings/privacy#user_privacy" target="_blank">Hackatime settings.</a></p>
+        {:else}
+            <p>This user may not exist, or they may have disabled public stats lookup.</p>
+        {/if}
     {/if}
-    </div>
 </div>
 
 <style>
@@ -334,7 +354,13 @@
     #chart-key {
         position: absolute;
         width: max-content;
+        margin-left: 4px;
     }
+    #chart-key h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+    }
+
     .chart-key-item {
         /* border-bottom: 1px solid #FFFFFF3F; */
         display: flex;
@@ -347,7 +373,7 @@
         display: block;
         width: var(--key-item-height);
         height: var(--key-item-height);
-        margin: 0 4px;
+        margin: 0 4px 0 0;
     }
 
     .chart-key-toggle, .chart-key-toggle input[type="checkbox"] {

@@ -9,14 +9,15 @@
 
     let p = $props();
     let {
-        heartbeats,
+        heartbeats = [],
         name,
         total_seconds,
         languages,
         repo_url,
         total_heartbeats,
         first_heartbeat,
-        last_heartbeat
+        last_heartbeat,
+        status
     }: {
         heartbeats: HeartbeatSpan[];
         name: string;
@@ -26,6 +27,7 @@
         total_heartbeats: number;
         first_heartbeat: string;
         last_heartbeat: string;
+        status: number;
     } = p.data;
 
     let chartLabels: HTMLDivElement;
@@ -95,6 +97,7 @@
 
     let renderer: SVGTimeRenderer;
     function draw() {
+        if (status !== 200) return;
         renderer = new SVGTimeRenderer(chartSvg, chartLabels, {
             width,
             height,
@@ -214,49 +217,61 @@
     }
 </script>
 
-<title>{user}/{name} | Hackatime Chart</title>
+<svelte:head>
+    <title>{user}/{name}{status !== 200 ? " (Not found)" : ""} | Hackatime Chart</title>
+</svelte:head>
 
 <div id="chart-wrapper">
-    <div id="chart-info" style:width="{width * scale + 400}px">
-        <h1>{name}</h1>
-        <div>Creator: <a href="/project/{user}{page.url.search}">{user}</a></div>
-        <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
-        <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
-        <div><a href={repo_url} target="_blank" tabindex="1">{repo_url}</a></div>
-        <button onclick={refresh} tabindex="1">Refresh</button>
-        <hr>
-        <div>
-            {#each Object.entries(DATE_OPTIONS) as [text, params], index}
-                {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{text}</a>
-            {/each}
-        </div>
-        <div>
-            Show days:
-            {#each SHOW_DAYS_OPTIONS as days, index}
-                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
-            {/each}
-        </div>
-    </div>
-    <div id="chart-info-spacer"></div>
-    <div id="chart-container">
-        <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
-        <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
-            onclick={() => setFocusedHeartbeat(null, null, true)}
-            onkeydown={handleKey}
-            onmousemove={() => setFocusedHeartbeat(null, null)}
-        ></svg>
-        {#if focusedHeartbeat && focusedHeartbeatPos}
-        {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
-        {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
-        {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
-        <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
+    {#if status === 200}
+        <div id="chart-info" style:width="{width * scale + 400}px">
+            <h1>{name}</h1>
+            <div>Creator: <a href="/project/{user}{page.url.search}">{user}</a></div>
+            <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
+            <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
+            <div><a href={repo_url} target="_blank" tabindex="1">{repo_url}</a></div>
+            <button onclick={refresh} tabindex="1">Refresh</button>
+            <hr>
             <div>
-                {focusedHeartbeat.project || name}<br>
-                {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
+                {#each Object.entries(DATE_OPTIONS) as [text, params], index}
+                    {index > 0 ? " | " : ""}<a href="?ts={params[0]}{params[1] ? `&days=${params[1]}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{text}</a>
+                {/each}
+            </div>
+            <div>
+                Show days:
+                {#each SHOW_DAYS_OPTIONS as days, index}
+                    {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
+                {/each}
             </div>
         </div>
+        <div id="chart-info-spacer"></div>
+        <div id="chart-container">
+            <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
+            <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
+                onclick={() => setFocusedHeartbeat(null, null, true)}
+                onkeydown={handleKey}
+                onmousemove={() => setFocusedHeartbeat(null, null)}
+            ></svg>
+            {#if focusedHeartbeat && focusedHeartbeatPos}
+            {@const startDate = new Date(focusedHeartbeat.start_time * 1000)}
+            {@const endDate = new Date(focusedHeartbeat.end_time * 1000)}
+            {@const [hours, minutes] = getHMSFromTime(focusedHeartbeat.duration)}
+            <div id="heartbeat-info" style:translate={focusedHeartbeatPos.join(' ')}>
+                <div>
+                    {focusedHeartbeat.project || name}<br>
+                    {startDate.toLocaleString()} - {endDate.toLocaleTimeString()} ({hours}h {minutes}m)
+                </div>
+            </div>
+        {/if}
+        </div>
+    {:else}
+        <h1>Project {name} not found</h1>
+        {#if status === 403}
+            <p>This project may exist, but the user has disabled public stats lookup.</p>
+            <p>If you created this project, try enabling public stats lookup in <a href="https://hackatime.hackclub.com/my/settings/privacy#user_privacy" target="_blank">Hackatime settings.</a></p>
+        {:else}
+            <p>This user or project may not exist, or they may have disabled public stats lookup.</p>
+        {/if}
     {/if}
-    </div>
 </div>
 
 <style>

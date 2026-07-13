@@ -8,19 +8,22 @@ export async function load({url, params}) {
     const statsUrl = util.format(API_USER_STATS_URL, user);
     const stats: UserStats = await fetch(statsUrl).then(res => {
         if (res.ok) return res.json();
-        if (res.status !== 403) return;
+        if (res.status !== 403) return res.status;
         // 403 = User disabled public stats lookup, but trust factor is always available
+        console.log("user disabled public stats lookup")
         const trustFactorUrl = util.format(API_TRUST_FACTOR_URL, user);
         return fetch(trustFactorUrl).then(res => ({
             data: null,
             trust_factor: res.json(),
+            status: 403
         }));
     });
 
-    if (stats.data == null) return {
-        ...stats,
-        allHeartbeats: {}
-    };
+    if (typeof stats === "number") return {
+        status: stats
+    }
+
+    if (stats.data === null) return stats;
     
 
     let projectNames: string[];
@@ -48,5 +51,6 @@ export async function load({url, params}) {
     return {
         ...stats,
         allHeartbeats,
+        status: 200
     }
 }
