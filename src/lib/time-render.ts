@@ -30,23 +30,27 @@ export interface TimeRenderer<T> {
 }
 
 export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
-    focusedHeartbeat: SVGUseElement | null = null;
+    focusedHeartbeat: SVGUseElement;
     hasFocusedHeartbeat = false;
+    chartGridGroup: SVGGElement;
+    chartContentGroup: SVGGElement;
 
     constructor(
         readonly chartSvg: SVGElement,
         readonly chartLabels: HTMLElement,
         readonly options: DrawSvgOptions,
         readonly barClickEvent: (event: FocusEvent | MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number, w: number) => void
-    ) {}
+    ) {
+        this.chartGridGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.chartContentGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        this.focusedHeartbeat = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        this.chartSvg.append(this.chartContentGroup, this.chartGridGroup, this.focusedHeartbeat);
+    }
 
     drawAll(heartbeats: HeartbeatSpan[], color: string = this.options.barColor) {
         this.drawBackground();
         this.drawHeartbeats(heartbeats, color);
         this.drawGrid(heartbeats);
-
-        this.focusedHeartbeat = document.createElementNS("http://www.w3.org/2000/svg", "use");
-        this.chartSvg.appendChild(this.focusedHeartbeat);
     }
 
 
@@ -62,7 +66,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
     drawHeartbeats(heartbeats: HeartbeatSpan[], color: string = this.options.barColor) {
         const {width, height, scale, offset, showDays, bgColor, barColor, barSize, minutesPerThickLine, hoursPerThickLine, use12HourTime} = this.options;
 
-        heartbeats.sort((a, b) => a.start_time - b.start_time); // keyboard navigation breaks without this
+        heartbeats.sort((a, b) => a.start_time - b.start_time || a.end_time - b.end_time); // keyboard navigation breaks without this
 
         // Draw heartbeats
         heartbeats.forEach(heartbeat => {
@@ -87,7 +91,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
                     x2 = width;
                 } else next = null;
                 
-                this.drawHeartbeatRect(heartbeat, start, x1 * scale, y, (x2 - x1) * scale, barSize, heartbeat.color ||color);
+                this.drawHeartbeatRect(heartbeat, start, x1 * scale, y, (x2 - x1) * scale, barSize, heartbeat.color || color);
 
                 c++
                 if (c > 99) {
@@ -142,7 +146,8 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
     drawHeartbeatRect(heartbeat: HeartbeatSpan, time: number, x: number, y: number, w: number, h: number, color: string = "white"): SVGRectElement {
         const rect = this.drawRect(x, y, w, h, color);
         rect.classList.add("heartbeat");
-        rect.id = `heartbeat-${time}`;
+        rect.classList.add(`heartbeat-${heartbeat.project}`);
+        rect.id = `heartbeat-${heartbeat.project}-${time}-${x}-${y}`;
         rect.addEventListener("focus", event => this.focusBar(event, heartbeat, x, y, w, true));
         rect.addEventListener("click", event => this.focusBar(event, heartbeat, x, y, w, true));
         rect.addEventListener("mousemove", event => this.focusBar(event, heartbeat, x, y, w));
@@ -158,7 +163,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         line.y2.baseVal.value = y2;
         line.setAttribute("stroke", color);
         line.setAttribute("stroke-width", String(width));
-        this.chartSvg.append(line);
+        this.chartGridGroup.append(line);
         return line;
     }
     drawRect(x: number, y: number, w: number, h: number, color: string = "white"): SVGRectElement {
@@ -168,7 +173,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         rect.width.baseVal.value = w;
         rect.height.baseVal.value = h;
         rect.setAttribute("fill", color);
-        this.chartSvg.append(rect);
+        this.chartContentGroup.append(rect);
         return rect;
     }
     drawText(x: number, y: number, content: string, color: string = "white", size: string|number = 12): SVGTextElement {
@@ -178,7 +183,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         text.setAttribute("fill", color);
         text.setAttribute("font-size", String(size));
         text.textContent = content;
-        this.chartSvg.append(text);
+        this.chartGridGroup!.append(text);
         return text;
     }
 
@@ -197,7 +202,7 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
     focusBar(event: FocusEvent | MouseEvent, heartbeat: HeartbeatSpan, x: number, y: number, w: number, force: boolean = false) {
         event.stopPropagation();
         if (this.hasFocusedHeartbeat && !force) return;
-        this.focusedHeartbeat!.href.baseVal = `#heartbeat-${heartbeat.start_time}`;
+        this.focusedHeartbeat!.href.baseVal = `#heartbeat-${heartbeat.project}-${heartbeat.start_time}-${x}-${y}`;
         this.barClickEvent(event, heartbeat, x, y, w);
         if (force) this.hasFocusedHeartbeat = true;
     }
@@ -205,5 +210,12 @@ export class SVGTimeRenderer implements TimeRenderer<SVGElement> {
         if (this.hasFocusedHeartbeat && !force) return;
         this.focusedHeartbeat!.href.baseVal = "";
         this.hasFocusedHeartbeat = false;
+    }
+
+    clearAll() {
+        const nextSibling = this.chartContentGroup.nextSibling;
+        this.chartContentGroup.remove();
+        this.chartContentGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        nextSibling?.parentNode?.insertBefore(this.chartContentGroup, nextSibling);
     }
 }

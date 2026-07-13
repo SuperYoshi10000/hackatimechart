@@ -217,7 +217,7 @@
 <div id="chart-wrapper">
     <div id="chart-info" style:width="{width * scale + 400}px">
         <h1>{name}</h1>
-        <div>Creator: {user}</div>
+        <div>Creator: <a href="/project/{user}{page.url.search}">{user}</a></div>
         <div>Total time: {totalHours}h {totalMinutes}m ({total_heartbeats} heartbeats)</div>
         <div>Started: {new Date(first_heartbeat).toLocaleString()} | Last updated: {new Date(last_heartbeat).toLocaleString()}</div>
         <div><a href={repo_url} target="_blank" tabindex="1">{repo_url}</a></div>
@@ -231,7 +231,7 @@
         <div>
             Show days:
             {#each SHOW_DAYS_OPTIONS as days, index}
-                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}days={days}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
+                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
             {/each}
         </div>
     </div>
@@ -276,7 +276,7 @@
     }
 
     a {
-        color: #7F7FFF;
+        color: #7FBFFF;
         text-decoration: none;
     }
     a:hover {

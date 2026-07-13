@@ -25,7 +25,7 @@
     const scale = 1/6;
     const barColorOffset = 200;
     const barColor = "hsl(200, 100%, 50%)";
-    const fgcolor = "white";
+    const fgColor = "white";
     const bgColor = "#1F1F1F";
 
     const SECONDS_PER_DAY = 86400;
@@ -115,7 +115,10 @@
     }
 
     function getColor(index: number, total: number) {
-        return `hsl(${(index * 360 / total + barColorOffset) % 360} 100 50)`;
+        const hue = (index * 360 / total + barColorOffset) % 360;
+        const saturation = 100 - (index % 2) * 30;
+        const lightness = 40 + (index % 6) * 5;
+        return `hsl(${hue} ${saturation} ${lightness})`;
     }
 
     function refresh(event?: Event) {
@@ -233,7 +236,7 @@
         <div>
             Show days:
             {#each SHOW_DAYS_OPTIONS as days, index}
-                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}days={days}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
+                {index > 0 ? " | " : ""}<a href="?{ts !== null ? `ts=${ts}&` : ""}{days ? `days=${days}` : ""}" onclick={event => location.replace((event.target as HTMLAnchorElement).href)} tabindex="1">{days || `Default (${DEFAULT_SHOW_DAYS})`}</a>
             {/each}
         </div>
     </div>
@@ -246,9 +249,18 @@
             onmousemove={() => setFocusedHeartbeat(null, null)}
         ></svg>
         <div id="chart-key" style:left="calc(50% + {width * scale / 2 + 5}px)">
-            {#each allHeartbeats as [name], i}
+            {#each allHeartbeats as [name, heartbeats], i}
+                {@const totalTime = heartbeats.reduce((a, b) => a + b.duration, 0)}
+                {@const [hours, minutes] = getHMSFromTime(totalTime)}
                 <div class="chart-key-item">
-                    <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>{name}
+                    <label class="chart-key-toggle">
+                        <input type="checkbox" checked>
+                        <span></span>
+                    </label>
+                    <a href="/project/{user}/{name}{page.url.search}" style:color={fgColor} title="{name} | Total: {hours}h {minutes}m ({heartbeats.length} heartbeats)">
+                        <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>
+                        {name}
+                    </a>
                 </div>
             {/each}
         </div>
@@ -267,6 +279,10 @@
 </div>
 
 <style>
+    :root {
+        --key-item-height: 18px;
+    }
+
     :global(body) {
         background: #1F1F1F;
         color: white;
@@ -285,7 +301,7 @@
     }
 
     a {
-        color: #7F7FFF;
+        color: #7FBFFF;
         text-decoration: none;
     }
     a:hover {
@@ -317,10 +333,27 @@
         position: absolute;
         width: max-content;
     }
+    .chart-key-item {
+        /* border-bottom: 1px solid #FFFFFF3F; */
+        display: flex;
+    }
+    .chart-key-item a {
+        display: flex;
+        text-decoration: none;
+    }
     .chart-key-marker {
-        display: inline-block;
-        width: 1em;
-        height: 1em;
+        display: block;
+        width: var(--key-item-height);
+        height: var(--key-item-height);
+        margin: 0 4px;
+    }
+
+    .chart-key-toggle, .chart-key-toggle input[type="checkbox"] {
+        width: var(--key-item-height);
+        height: var(--key-item-height);
+    }
+    .chart-key-toggle input[type="checkbox"] {
+        margin: 0;
     }
 
     #heartbeat-info {
@@ -354,5 +387,7 @@
     :global(svg use) {
         pointer-events: none;
         user-select: none;
+        stroke: white;
+        stroke-width: 1px;
     }
 </style>
