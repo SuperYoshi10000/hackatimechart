@@ -1,5 +1,6 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+  import Navbar from '$lib/components/Navbar.svelte';
 
 	let { children } = $props();
 </script>
@@ -8,6 +9,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+<Navbar />
 {@render children()}
 
 <style>
@@ -21,6 +23,7 @@
 	:global(body) {
         background: #1F1F1F;
         color: white;
+		margin: 0;
     }
 
 	:global(a) {

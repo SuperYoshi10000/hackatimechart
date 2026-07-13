@@ -73,6 +73,7 @@
 
     tr {
         height: 2rem;
+        max-height: 2rem;
     }
 
     td {
@@ -85,6 +86,8 @@
     .active-users-avatar img {
         width: 2rem;
         max-width: 2rem;
+        height: 2rem;
+        max-height: 2rem;
     }
     .active-users-flag {
         width: 1rem;
