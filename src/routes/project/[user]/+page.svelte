@@ -220,6 +220,8 @@
     }
 </script>
 
+<title>{user} | Hackatime Chart</title>
+
 <div id="chart-wrapper">
     <div id="chart-info" style:width="{width * scale + 400}px">
         <h1>{user}</h1>
@@ -253,10 +255,10 @@
                 {@const totalTime = heartbeats.reduce((a, b) => a + b.duration, 0)}
                 {@const [hours, minutes] = getHMSFromTime(totalTime)}
                 <div class="chart-key-item">
-                    <label class="chart-key-toggle">
+                    <!-- <label class="chart-key-toggle">
                         <input type="checkbox" checked>
                         <span></span>
-                    </label>
+                    </label> -->
                     <a href="/project/{user}/{name}{page.url.search}" style:color={fgColor} title="{name} | Total: {hours}h {minutes}m ({heartbeats.length} heartbeats)">
                         <span class="chart-key-marker" style:background-color={getColor(i, allHeartbeats.length)}></span>
                         {name}

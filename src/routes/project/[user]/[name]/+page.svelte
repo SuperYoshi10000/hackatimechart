@@ -214,6 +214,8 @@
     }
 </script>
 
+<title>{user}/{name} | Hackatime Chart</title>
+
 <div id="chart-wrapper">
     <div id="chart-info" style:width="{width * scale + 400}px">
         <h1>{name}</h1>

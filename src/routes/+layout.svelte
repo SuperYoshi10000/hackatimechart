@@ -15,4 +15,9 @@
 		font-family: "Roboto", sans-serif;
 		font-size: 16px;
 	}
+
+	:global(body) {
+        background: #1F1F1F;
+        color: white;
+    }
 </style>
