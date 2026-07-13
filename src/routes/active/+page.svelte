@@ -1,7 +1,8 @@
 <script lang="ts">
+    import { page } from "$app/state";
     import { PUBLIC_FLAG_API_CODES_URL, PUBLIC_FLAG_API_URL } from "$env/static/public";
+    import PageControl from "$lib/components/PageControl.svelte";
     import type { ActiveUsers } from "$lib/types";
-    import { getHMSFromTime } from "$lib/util";
     import { onMount } from "svelte";
 
     let p = $props();
@@ -9,6 +10,9 @@
         count,
         users
     }: ActiveUsers = p.data;
+
+    const max = Number(page.url.searchParams.get("max") || 100);
+    const pageNum = Number(page.url.searchParams.get("page") || 1);
 
     let countryNames: Record<string, string> = $state({});
 
@@ -28,6 +32,7 @@
 <div>
     <h1>Active Users</h1>
     <p>{count} users are currently active</p>
+    <PageControl max={max} page={pageNum} />
     <table>
         <colgroup>
             <col style:width="2rem" style:min-width="fit-content">
@@ -53,6 +58,7 @@
             {/each}
         </tbody>
     </table>
+    <PageControl max={max} page={pageNum} />
 </div>
 
 <style>

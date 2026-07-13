@@ -293,7 +293,7 @@
         <h1>User {user} not found</h1>
         {#if status === 403}
             <p>This user may exist, but they have disabled public stats lookup.</p>
-            <p>If this is you, try enabling public stats lookup in <a href="https://hackatime.hackclub.com/my/settings/privacy#user_privacy" target="_blank">Hackatime settings.</a></p>
+            <p>If this is you, try enabling public stats lookup in <a href="https://hackatime.hackclub.com/my/settings/privacy#user_privacy" target="_blank">Hackatime settings</a>.</p>
         {:else}
             <p>This user may not exist, or they may have disabled public stats lookup.</p>
         {/if}

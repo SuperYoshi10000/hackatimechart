@@ -52,7 +52,7 @@
         padding: 0.5rem;
         margin: 0.2rem 0 0.5rem;
         border-radius: 0.5rem;
-        background: hsl(200 100 50);
+        background: var(--color-accent);
         color: white;
         border: 1px solid #7F7F7F7F;
         font-weight: bold;
