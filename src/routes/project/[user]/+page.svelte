@@ -42,9 +42,9 @@
     const [averageHours, averageMinutes] = getHMSFromTime(data?.daily_average ?? 0);
 
     const TRUST_FACTORS = {
-        "blue": "Blue - Normal",
-        "green": "Green - Trusted",
-        "red": "Red - Banned"
+        "blue": "🔵 Blue - Normal",
+        "green": "🟢 Green - Trusted",
+        "red": "🟥 Red - Banned"
     }
     const trustFactorText = TRUST_FACTORS[trust_factor.trust_level];
 
@@ -227,7 +227,7 @@
         <h1>{user}</h1>
         <div>Total time: {totalHours}h {totalMinutes}m</div>
         <!-- <div>Average: {averageHours}h {averageMinutes}m</div> (This is misleading so I removed it) -->
-        <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
+        <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: <span style:font-style="normal">🟡</span> Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
         <button onclick={refresh} tabindex="1">Refresh</button>
         <hr>
         <div>
