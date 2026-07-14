@@ -11,8 +11,8 @@
         users
     }: ActiveUsers = $derived(p.data);
 
-    const max = Number(page.url.searchParams.get("max") || 100);
-    const pageNum = Number(page.url.searchParams.get("page") || 1);
+    const max = $derived(Number(page.url.searchParams.get("max") || 100));
+    const pageNum = $derived(Number(page.url.searchParams.get("page") || 1));
 
     let countryNames: Record<string, string> = $state({});
 

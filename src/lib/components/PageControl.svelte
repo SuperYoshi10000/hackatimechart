@@ -9,7 +9,7 @@
 </script>
 
 <div>
-    <a href="?max={max}&page={page - 1}">Previous Page</a> |
+    <a href="?max={max}&page={Math.max(1, page - 1)}">Previous Page</a> |
     <a href="?max={max}&page={page + 1}">Next Page</a> |
     <a href="?max={max}&page=1">First Page</a> |
     <a href="?max=50&page={page}">50</a> |

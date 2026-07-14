@@ -14,8 +14,8 @@
     }: Leaderboard = $derived(p.data);
 
     const range = $derived(period === "daily" ? "Daily" : "Weekly");
-    const max = Number(page.url.searchParams.get("max") || 100);
-    const pageNum = Number(page.url.searchParams.get("page") || 1);
+    const max = $derived(Number(page.url.searchParams.get("max") || 100));
+    const pageNum = $derived(Number(page.url.searchParams.get("page") || 1));
 </script>
 
 <svelte:head>
