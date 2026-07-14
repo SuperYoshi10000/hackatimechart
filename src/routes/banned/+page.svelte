@@ -1,6 +1,6 @@
 <script>
     let p = $props();
-    let { day, week, month } = p.data;
+    let { day, week, month } = $derived(p.data);
 </script>
 
 <svelte:head>

@@ -47,9 +47,11 @@
     const TRUST_FACTORS = {
         "blue": "🔵 Blue - Normal",
         "green": "🟢 Green - Trusted",
-        "red": "🟥 Red - Banned"
-    }
-    const trustFactorText = TRUST_FACTORS[trust_factor?.trust_level] || "Unknown";
+        "yellow": "🟡 Yellow - Suspected",
+        "red": "🟥 Red - Banned",
+        "": "Unknown"
+    } as const;
+    const trustFactorText = TRUST_FACTORS[trust_factor?.trust_level ?? ""] ?? "Unknown";
 
     const DEFAULT_SHOW_DAYS = 7;
 
@@ -235,6 +237,8 @@
             <div>Total time: {totalHours}h {totalMinutes}m</div>
             <!-- <div>Average: {averageHours}h {averageMinutes}m</div> (This is misleading so I removed it) -->
             <div>Trust factor: {trustFactorText} {#if trust_factor.trust_level === "blue"}<i>(Note: <span style:font-style="normal">🟡</span> Yellow is replaced with blue in public APIs, so this may be inaccurate)</i>{/if}</div>
+            <div style:margin-bottom="1em"><a href="/summary/{user}">View summary</a></div>
+            
             <button onclick={refresh} tabindex="1">Refresh</button>
             <hr>
             <div>
@@ -249,7 +253,6 @@
                 {/each}
             </div>
         </div>
-        <div id="chart-info-spacer"></div>
         <div id="chart-container">
             <div id="chart-labels" bind:this={chartLabels} style:right="calc(50% + {width * scale / 2 + 5}px)"></div>
             <svg id="chart-svg" width={width * scale} height={height * showDays} bind:this={chartSvg}
@@ -260,7 +263,7 @@
             <div id="chart-key" style:left="calc(50% + {width * scale / 2 + 5}px)">
                 <div>
                     <h2>Projects</h2>
-                    <input />
+                    <!-- <input /> -->
                 </div>
                 {#each allHeartbeats as [name, heartbeats], i}
                     {@const totalTime = heartbeats.reduce((a, b) => a + b.duration, 0)}

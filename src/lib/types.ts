@@ -26,9 +26,9 @@ export interface UserStats {
     data: {
         total_seconds: number;
         daily_average: number;
-        languages: StatDataPart[];
-        projects: StatDataPart[];
-        editors: StatDataPart[];
+        languages: UserStatsDataPart[];
+        projects: UserStatsDataPart[];
+        editors: UserStatsDataPart[];
         streak: number;
         unique_total_seconds: number;
     } | null;
@@ -37,11 +37,31 @@ export interface UserStats {
         trust_value: 0 | 1 | 2;
     };
 }
-export interface StatDataPart {
+export interface UserStatsDataPart {
     name: string;
     total_seconds: number;
     percent: number;
 }
+
+export interface UserSummary {
+    user_id: string;
+    from: string;
+    to: string;
+    projects: UserSummaryDataPart[];
+    languages: UserSummaryDataPart[];
+    editors: UserSummaryEmptyData;
+    operating_systems: UserSummaryEmptyData;
+    machines: UserSummaryEmptyData;
+    categories: UserSummaryEmptyData;
+    branches: UserSummaryEmptyData;
+    entities: UserSummaryEmptyData;
+    labels: UserSummaryEmptyData;
+}
+export interface UserSummaryDataPart {
+    key: string;
+    total: number;
+}
+export type UserSummaryEmptyData = {} | null;
 
 export interface Leaderboard {
     date_range: string;

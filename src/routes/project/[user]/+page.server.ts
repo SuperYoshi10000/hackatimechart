@@ -1,4 +1,4 @@
-import { API_PROJECT_URL, API_PROJECT_NAMES_URL, API_USER_STATS_URL, API_TRUST_FACTOR_URL, API_HEARTBEAT_URL, API_PROJECT_DETAILS_URL } from "$env/static/private";
+import { API_PROJECT_URL, API_PROJECT_NAMES_URL, API_USER_STATS_URL, API_TRUST_FACTOR_URL, API_HEARTBEAT_URL, API_PROJECT_DETAILS_URL, API_USER_SUMMARY_URL } from "$env/static/private";
 import type { HeartbeatSpan, HeartbeatSpanList, UserStats } from "$lib/types";
 import util from 'util';
 
@@ -22,9 +22,7 @@ export async function load({url, params}) {
     if (typeof stats === "number") return {
         status: stats
     }
-
     if (stats.data === null) return stats;
-    
 
     let projectNames: string[];
     if (url.searchParams.has("start")) {

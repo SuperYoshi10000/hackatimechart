@@ -9,7 +9,7 @@
     let {
         count,
         users
-    }: ActiveUsers = p.data;
+    }: ActiveUsers = $derived(p.data);
 
     const max = Number(page.url.searchParams.get("max") || 100);
     const pageNum = Number(page.url.searchParams.get("page") || 1);
@@ -35,9 +35,9 @@
     <PageControl max={max} page={pageNum} />
     <table>
         <colgroup>
-            <col style:width="2rem" style:min-width="fit-content">
-            <col>
-            <col>
+            <col style:width="2rem" style:min-width="fit-content"/>
+            <col/>
+            <col/>
         </colgroup>
         <thead>
             <tr>
@@ -49,8 +49,8 @@
             {#each users as user}
                 {@const countryName = countryNames[user.country_code.toLowerCase()] || user.country_code}
                 <tr>
-                    <td class="active-users-avatar"><img src={user.avatar_url} alt="{user.display_name} Avatar" loading="lazy"></td>
-                    <td>{user.display_name}<img class="active-users-flag" src={getFlagUrl(user.country_code)} alt="{countryName} Flag" title={countryName} loading="lazy"></td>
+                    <td class="active-users-avatar"><img src={user.avatar_url} alt="{user.display_name} Avatar" loading="lazy"/></td>
+                    <td>{user.display_name}<img class="active-users-flag" src={getFlagUrl(user.country_code)} alt="{countryName} Flag" title={countryName} loading="lazy"/></td>
                     {#if user.working_on}
                         <td><a href={user.working_on.repo_url}>{user.working_on.project_name}</a></td>
                     {/if}

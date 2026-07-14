@@ -34,10 +34,10 @@
     <PageControl max={max} page={pageNum} />
     <table>
         <colgroup>
-            <col style:width="2rem" style:min-width="fit-content">
-            <col style:width="2rem">
-            <col>
-            <col style:width="100px">
+            <col style:width="2rem" style:min-width="fit-content"/>
+            <col style:width="2rem"/>
+            <col/>
+            <col style:width="100px"/>
         </colgroup>
         <thead>
             <tr>
@@ -51,7 +51,7 @@
                 {@const [hours, minutes] = getHMSFromTime(entry.total_seconds)}
                 <tr>
                     <td class="leaderboard-rank">{entry.rank}</td>
-                    <td class="leaderboard-avatar"><img src={entry.user.avatar_url} alt="{entry.user.username} Avatar" loading="lazy"></td>
+                    <td class="leaderboard-avatar"><img src={entry.user.avatar_url} alt="{entry.user.username} Avatar" loading="lazy"/></td>
                     <td><a href="/project/{entry.user.id}">{entry.user.username}</a></td>
                     <td>{hours}h {minutes}m</td>
                 </tr>
