@@ -14,6 +14,7 @@
         justify-content: center;
         align-items: center;
         background: #0F0F0F7F;
+        z-index: 999999;
     }
     nav span {
         margin-right: 1rem;
