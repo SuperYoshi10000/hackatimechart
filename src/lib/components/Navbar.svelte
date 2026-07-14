@@ -31,6 +31,7 @@
     nav span img {
         height: 1.5rem;
         margin-right: 0.5rem;
+        image-rendering: pixelated;
     }
     nav > a {
         color: white;
@@ -40,7 +41,7 @@
         padding: 0.5rem;
         text-align: center;
     }
-    nav > a:hover {
+    nav > a:is(:hover, :focus) {
         background: #FFFFFF1F;
     }
 </style>

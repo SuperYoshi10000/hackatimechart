@@ -77,6 +77,7 @@
         justify-content: center;
         align-items: center;
         max-width: 200px;
+        gap: 0.5rem;
     }
     #leaderboard-time-toggle a {
         width: 50%;
@@ -85,11 +86,17 @@
         font-weight: bold;
         border-radius: 1rem;
     }
+    #leaderboard-time-toggle > a:is(:hover, :focus) {
+        background: #FFFFFF1F;
+    }
     #leaderboard-time-toggle a[data-active=true] {
         background-color: var(--color-accent);
     }
     tr {
         height: 2rem;
+    }
+    tbody tr:is(:hover, :focus) {
+        background: #FFFFFF1F;
     }
 
     td {

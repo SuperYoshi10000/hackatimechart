@@ -75,6 +75,9 @@
         height: 2rem;
         max-height: 2rem;
     }
+    tbody tr:is(:hover, :focus) {
+        background: #FFFFFF1F;
+    }
 
     td {
         padding: 0.2rem;
